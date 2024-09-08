@@ -68,7 +68,7 @@ def load_models_weights(args, model):
 
     # Define the folder path for the pretrained model
     args.model_name = f'{args.pretrained_model}_lr{args.learning_rate}_bs{args.batch_size}_{args.epochs}epochs'
-    args.pretrained_path = os.path.join(BASE_DIR, 'models', args.model_name)
+    args.pretrained_path = os.path.join(BASE_DIR, 'models', args.sub_dir, args.model_name)
 
     # Determine the checkpoint to load: final, highest, or a specific epoch
     if args.ckpt == 'last':
@@ -83,15 +83,22 @@ def load_models_weights(args, model):
 
     return model
 
-def load_model(args, is_cuda=False):
+def load_model(args, verbose=False, is_cuda=False):
     """
     Initialize and load the model with pretrained weights.
+
+    Args:
+        args: Parsed command-line arguments.
+        verbose (bool): Whether to print status messages.
+        is_cuda (bool): Whether to use CUDA.
+
+    Returns:
+        model: The loaded model.
     """
     if args.pretrained_model == 'resnetd':
         model = ResNetD(input_shape=3, num_classes=1)
-
-    model = load_models_weights(args, model)
-
+        model = load_models_weights(args, model, verbose)
+        
     if is_cuda:
         model = model.cuda()
 
@@ -99,7 +106,15 @@ def load_model(args, is_cuda=False):
 
 def inference(args, model, verbose=False):
     """
-    Perform inference using the provided models in the specified environment.
+    Perform inference using the provided model in the specified environment.
+
+    Args:
+        args: Configuration arguments containing environment and model details.
+        model: The pre-trained model used for inference.
+        verbose (bool): If True, prints detailed information during inference.
+
+    Returns:
+        tuple: Aggregated rewards and episode information as numpy arrays.
     """
     model.eval()
 
@@ -111,8 +126,8 @@ def inference(args, model, verbose=False):
     episode_info = []
 
     # Evaluate the model for each day
-    for scn in range(env.num_scenarios):
-        state, info = env.reset(scn)
+    for scenario_idx in range(env.num_scenarios):
+        state, info = env.reset(scenario_idx)
         total_reward = 0
 
         while True:
@@ -139,37 +154,55 @@ def inference(args, model, verbose=False):
 
     return np.array(aggregated_rewards), np.array(episode_info)
 
-def evaluate(args, model, best_rewards):
+def evaluate(args, model, best_rewards, verbose=False):
     """
-    Evaluate the models and calculate metrics based on predictions vs actual rewards.
+    Evaluate the model using the provided dataset and calculate evaluation metrics.
+
+    Args:
+        args: Parsed command-line arguments.
+        model: The trained model to be evaluated.
+        best_rewards: True rewards for comparison.
+        verbose (bool): Whether to print status messages.
+
+    Returns:
+        dict: A dictionary containing evaluation metrics.
     """
     # Perform inference with the model
-    predicted_rewards, inference_info = inference(args, model)
+    predicted_rewards, inference_info = inference(args, model, verbose)
     
     # Calculate evaluation metrics (e.g., MAE, MAPE) based on the true values and predictions
-    metrics = cal_metric(best_rewards, predicted_rewards)
-
-    # Print the evaluation results
-    logging.info(f"Overall MAE: {metrics['overall_mae']:.4f}, Overall MAPE: {metrics['overall_mape']:.4f}%")
+    evaluation_metrics = cal_metric(best_rewards, predicted_rewards)
     
-    return metrics, inference_info
+    # Optionally, print the evaluation results
+    if verbose:
+        print(f"Overall MAE: {evaluation_metrics['overall_mae']:.4f}, "
+              f"Overall MAPE: {evaluation_metrics['overall_mape']:.4f}%")
+    
+    return evaluation_metrics, inference_info
 
-def test(args, is_cuda=False):
+def test(args, verbose=True, is_cuda=False):
     """
-    Test the model by evaluating its predictions against the best rewards.
+    Test the model by evaluating its predictions against the actual rewards.
+
+    Args:
+        args: Parsed command-line arguments.
+        verbose (bool): Whether to print status messages.
+
+    Returns:
+        dict: A dictionary containing evaluation metrics.
     """
     # Load the actual rewards (ground truth) from the dataset
     best_rewards = load_dataset(args)
 
-    # Load the pre-trained models
-    model = load_model(args, is_cuda=False)
+    # Load the pre-trained model with the specified configuration
+    model = load_model(args, verbose=verbose, is_cuda=False)
 
     # Evaluate the model's predictions against the actual rewards
-    metrics, inference_info = evaluate(args, model, best_rewards)
+    evaluation_metrics, inference_info = evaluate(args, model, best_rewards, verbose)
 
-    return metrics, inference_info
+    return evaluation_metrics, inference_info
 
 # python3 src/test_model.py
 if __name__ == '__main__':
     args = parse_args()
-    test(args, is_cuda=False)
+    test(args, verbose=True, is_cuda=False)
