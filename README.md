@@ -26,34 +26,34 @@ The dataset contains load and temperature data from 2003 to 2014. -->
     │   └── resnetd.py/                    # Leaner model
     ├── solver/
     │   ├── methods/
-    │   │   ├── data_loader.py             # Data loading methods
-    │   │   ├── dataset_aggregation.py     # Dataset aggregation logic
-    │   │   ├── feature_engineering.py     # Feature engineering scripts
-    │   │   ├── run_scenario.py            # Running scenarios or simulations
-    │   │   └── util.py                    # Utility functions specific to methods
+    │   │   ├── data_loader.py
+    │   │   ├── dataset_aggregation.py
+    │   │   ├── feature_engineering.py
+    │   │   ├── optimization.py
+    │   │   └── util.py
     │   ├── platform/
-    │   │   ├── components/                # Components of the microgrid platform
+    │   │   ├── components/                # Components of the system
     │   │   │   ├── __init__.py
-    │   │   │   ├── deg.py                 # Diesel engine generator
-    │   │   │   ├── distflow.py            # Distribution network constraints
-    │   │   │   ├── ess.py                 # Energy storage system logic
-    │   │   │   ├── load.py                # Load (both flexible and inflexible) logic
-    │   │   │   └── renewables.py          # Renewable energy sources (PV, Wind, etc.)
-    │   │   ├── microgrid_env.py           # Microgrid environment setup and management (for testing)
-    │   │   ├── microgrid.py               # Microgrid optimization logic
-    │   │   └── util.py                    # Utility functions for the platform
+    │   │   │   ├── diesel_generator.py
+    │   │   │   ├── distflow.py
+    │   │   │   ├── energy_storage.py
+    │   │   │   ├── flexible_load.py
+    │   │   │   └── renewables.py
+    │   │   ├── microgrid.py               # Microgrid optimization
+    │   │   ├── test_env.py                # Microgrid environment setup and management (for testing)
+    │   │   └── util.py
     │   ├── utils/                         # General utility functions
     │   │   ├── __init__.py
-    │   │   ├── file_util.py               # File handling utilities
-    │   │   └── numeric_util.py            # Numerical operations utilities
+    │   │   ├── file_util.py
+    │   │   └── numeric_util.py
     │   ├── __init__.py
     │   └── config.py                      # Configuration file for parameters
     ├── utils/                             # High-level utility scripts
     │   ├── __init__.py
-    │   ├── common_util.py                 # Common utility functions
-    │   ├── preprocessing_util.py          # Preprocessing utility functions
-    │   ├── test_util.py                   # Utility functions for testing
-    │   └── train_util.py                  # Utility functions for training
+    │   ├── common_util.py
+    │   ├── preprocessing_util.py
+    │   ├── test_util.py
+    │   └── train_util.py
     ├── data_generation.py                 # Data generation scripts
     ├── preprocessing.py                   # Data preprocessing scripts
     ├── test_model.py                      # Model testing scripts

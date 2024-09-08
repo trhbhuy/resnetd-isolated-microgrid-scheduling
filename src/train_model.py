@@ -1,5 +1,6 @@
 import os
 import argparse
+import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,6 +15,9 @@ NUM_FEATURES = 3
 NUM_CLASSES = 1
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def parse_option():
     """
@@ -51,16 +55,7 @@ def parse_option():
     return opt
 
 def set_loader(opt):
-    """
-    Set up data loaders for training and validation.
-    
-    Args:
-        args (Namespace): Parsed command-line arguments.
-    
-    Returns:
-        train_loader (DataLoader): DataLoader for training data.
-        val_loader (DataLoader): DataLoader for validation data.
-    """
+    """Set up data loaders for training and validation."""
     train_dataset = data_loading(opt, is_train=True)
     val_dataset = data_loading(opt, is_train=False)
     
@@ -71,16 +66,7 @@ def set_loader(opt):
 
 
 def set_model(opt):
-    """
-    Initialize the model and criterion.
-    
-    Args:
-        args (Namespace): Parsed command-line arguments.
-    
-    Returns:
-        model (torch.nn.Module): Initialized model.
-        criterion (torch.nn.Module): Loss function.
-    """
+    """Initialize the model and loss function."""
     if opt.model == 'resnetd':
         model = ResNetD(input_shape=NUM_FEATURES, num_classes=NUM_CLASSES)
     else:
@@ -104,17 +90,7 @@ optimize_dict = {
 }
 
 def set_optimizer(opt, model, optim_choice='Adam'):
-    """
-    Set up the optimizer.
-    
-    Args:
-        args (Namespace): Parsed command-line arguments.
-        model (torch.nn.Module): Model to optimize.
-        optim_choice (str): Optimizer type (e.g., 'Adam').
-    
-    Returns:
-        optimizer (torch.optim.Optimizer): Initialized optimizer.
-    """
+    """Set up the optimizer."""
     optimizer_cls = optimize_dict[optim_choice]
     if optim_choice == 'Adam':
         optimizer = optimizer_cls(model.parameters(), lr=opt.learning_rate, weight_decay=opt.weight_decay)
@@ -125,22 +101,7 @@ def set_optimizer(opt, model, optim_choice='Adam'):
 
 
 def train_model(train_loader, model, criterion, optimizer, epoch, opt, step):
-    """
-    Train the model for one epoch.
-    
-    Args:
-        train_loader (DataLoader): DataLoader for training data.
-        model (torch.nn.Module): Model to train.
-        criterion (torch.nn.Module): Loss function.
-        optimizer (torch.optim.Optimizer): Optimizer.
-        epoch (int): Current epoch.
-        args (Namespace): Parsed command-line arguments.
-        step (int): Global training step.
-    
-    Returns:
-        step (int): Updated training step.
-        avg_train_loss (float): Average training loss for the epoch.
-    """
+    """Train the model for one epoch."""
     model.train()
     losses = MeanMeter()
     
@@ -158,17 +119,7 @@ def train_model(train_loader, model, criterion, optimizer, epoch, opt, step):
 
 
 def validate_model(valid_loader, model, criterion):
-    """
-    Validate the model on validation data.
-    
-    Args:
-        val_loader (DataLoader): DataLoader for validation data.
-        model (torch.nn.Module): Model to validate.
-        criterion (torch.nn.Module): Loss function.
-    
-    Returns:
-        avg_valid_loss (float): Average validation loss.
-    """
+    """Validate the model on validation data."""
     model.eval()
     losses = MeanMeter()
     
@@ -183,9 +134,7 @@ def validate_model(valid_loader, model, criterion):
 
 
 def main():
-    """
-    Main function to train the model.
-    """
+    """Main function to train the model."""
     opt = parse_option()
 
     train_loader, val_loader = set_loader(opt)
@@ -203,7 +152,7 @@ def main():
         step, train_loss = train_model(train_loader, model, criterion, optimizer, epoch, opt, step)
         val_loss = validate_model(val_loader, model, criterion)
         
-        print(f'Epoch: {epoch}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}')
+        logging.info(f'Epoch: {epoch}, Train Loss: {train_loss:.4f}, Validation Loss: {val_loss:.4f}')
 
         # Update learning rate
         scheduler.step()
@@ -220,7 +169,7 @@ def main():
         
         # Early stopping
         if opt.use_early_stop and patience_counter >= opt.patience:
-            print(f"Early stopping at epoch {epoch}. Best Validation Loss: {best_val_loss:.4f}")
+            logging.info(f"Early stopping at epoch {epoch}. Best Validation Loss: {best_val_loss:.4f}")
             break
     
     # Save the last model

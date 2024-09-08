@@ -25,7 +25,7 @@ def parse_args():
     parser.add_argument('--pretrained_model', type=str, default='resnetd', help='Pretrained model to be loaded')
     parser.add_argument('--learning_rate', type=float, default=0.005, help='Learning rate for the model')
     parser.add_argument('--batch_size', type=int, default=48, help='Batch size for testing')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs used for training')
+    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs used for training')
     parser.add_argument('--ckpt', type=str, default='best', help='Checkpoint to load (e.g., final, highest, or specific epoch)')
 
     args = parser.parse_args()

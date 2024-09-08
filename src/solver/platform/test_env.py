@@ -1,3 +1,4 @@
+import logging
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
@@ -7,6 +8,9 @@ from gurobipy import GRB
 from .. import config as cfg
 from ..methods.data_loader import load_data
 from .util import scaler_loader, check_boundary_constraint, check_ramp_constraint, check_setpoint, generate_pla_points, calculate_F_deg, calculate_F_ess
+
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MicrogridEnv(gym.Env):
     def __init__(self):
@@ -19,7 +23,7 @@ class MicrogridEnv(gym.Env):
         # Load the simulation data
         self.data = load_data(is_train=False)
         self.num_scenarios = len(self.data['p_if']) // self.T_num
-        print(f"Number of scenarios: {self.num_scenarios}")
+        logging.info(f"Number of scenarios: {self.num_scenarios}")
 
         # Load state and action scalers
         self.state_scaler, self.action_scaler = scaler_loader()
