@@ -12,8 +12,8 @@ class MicrogridEnv(gym.Env):
     def __init__(self):
         """Initialize the microgrid environment."""
         # Load and initialize the network data, parameters, and PLA points
-        self.initialize_network_data()
-        self.initialize_parameters()
+        self._init_network_data()
+        self._init_params()
         self._initialize_pla_points()
     
         # Load the simulation data
@@ -25,11 +25,11 @@ class MicrogridEnv(gym.Env):
         self.state_scaler, self.action_scaler = scaler_loader()
 
         # Define observation space (normalized to [0, 1])
-        observation_dim = 3  # Example: time_step, net demand, SOC of ESS
+        observation_dim = 3
         self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(observation_dim,), dtype=np.float32)
 
         # Define action space (normalized to [0, 1])
-        action_dim = 1  # Example: charging/discharging action for ESS
+        action_dim = 1
         self.action_space = spaces.Box(low=0.0, high=1.0, shape=(action_dim,), dtype=np.float32)
 
     def reset(self, seed=0):
@@ -38,9 +38,9 @@ class MicrogridEnv(gym.Env):
         self.time_step = 0
 
         # Calculate the index for the scenario data
-        index = self.scenario_seed * self.T_num
+        index = self._get_index(self.scenario_seed, self.time_step)
 
-        # Define the starting state
+        # Initialize state
         initial_state = np.array([
             self.time_step,
             self.data['p_if'][index] + self.data['p_fl_1'][index] + self.data['p_fl_2'][index] - 
@@ -62,40 +62,35 @@ class MicrogridEnv(gym.Env):
         current_state = self.state_scaler.inverse_transform([self.state])[0].astype(np.float32)
 
         # Decompose the state into individual variables
-        time_step = int(np.round(current_state[0]))
-        p_net, soc_ess_tempt = current_state[1:]
+        time_step, p_net, soc_ess_tempt = current_state
+        time_step = int(np.round(time_step))
 
         # Fetch the data for the current time step
-        base_idx = self.scenario_seed * self.T_num + time_step
-        p_pv_max = self.data['p_pv_max'][base_idx]
-        p_wg_max = self.data['p_wg_max'][base_idx]
-        p_if = self.data['p_if'][base_idx]
-        p_fl_1 = self.data['p_fl_1'][base_idx]
-        p_fl_2 = self.data['p_fl_2'][base_idx]
+        base_idx = self._get_index(self.scenario_seed, time_step)
 
-        # Validate the current state values
-        self._validate_state(p_net, soc_ess_tempt, p_if, p_fl_1, p_fl_2, p_pv_max, p_wg_max)
-
-        #<-- ### Process the action and update the state ### -->
         # Inverse transform the action using the scaler
         action_pred = self.action_scaler.inverse_transform(action.reshape(1, -1))[0]
 
-        # Clip actions to be within their respective limits
+        # Clip action to be within its respective limit
         action = np.clip(action_pred, -self.p_ess_dch_max, self.p_ess_ch_max)[0]
-        p_ess_ch, p_ess_dch, soc_ess = self.update_ess(time_step, action, soc_ess_tempt)
+        p_ess_ch, p_ess_dch, soc_ess = self._update_ess(time_step, action, soc_ess_tempt)
 
         # Solve the MILP optimization problem
-        p_deg, u_deg, p_pv, p_wg, p_ls_1, p_ls_2, reward = self.optim(time_step, p_pv_max, p_wg_max, p_if, p_fl_1, p_fl_2, p_ess_ch, p_ess_dch)
+        p_deg, u_deg, p_pv, p_wg, p_ls_1, p_ls_2, reward = self.optim(self.data['p_pv_max'][base_idx], 
+                                                                      self.data['p_wg_max'][base_idx], 
+                                                                      self.data['p_if'][base_idx], 
+                                                                      self.data['p_fl_1'][base_idx], 
+                                                                      self.data['p_fl_2'][base_idx], 
+                                                                      p_ess_ch, p_ess_dch)
 
-        #<-- ### Reward ### -->
         # Calculate the reward and penalties
         cumulative_penalty = self._get_penalty(time_step, p_deg, u_deg, self.p_deg_tempt, self.r_deg, soc_ess)
         reward += cumulative_penalty * self.penalty_coefficient
 
-        #<-- ### Prepare for next state ### -->
+        # Prepare next state
         next_state, terminated = self._get_obs(time_step, soc_ess)
 
-        # Update the state and DEG power for the next step
+        # Update the state for the next step
         self.state = self.state_scaler.transform([next_state])[0].astype(np.float32)
         self.p_deg_tempt = p_deg if time_step < self.T_num else 0
 
@@ -111,19 +106,15 @@ class MicrogridEnv(gym.Env):
             "soc_ess": soc_ess
         }
 
-    def _validate_state(self, p_net, soc_ess_tempt, p_if, p_fl_1, p_fl_2, p_pv_max, p_wg_max):
-        """Validate that the state values are within expected ranges."""
-        if np.abs(p_net - (p_if + p_fl_1 + p_fl_2 - p_pv_max - p_wg_max)) > 0.001:
-            raise ValueError(f"Invalid p_net: {p_net}")
-
-        if not (self.soc_ess_min <= np.round(soc_ess_tempt, 4) <= self.soc_ess_setpoint):
-            raise ValueError(f"Invalid ESS level: {soc_ess_tempt}")
-
     def _get_obs(self, time_step, soc_ess):
         """Prepare the next state and determine if the episode has terminated."""
+        # Increment the time step.
         time_step += 1
+
+        # Determine if the episode has terminated.
         terminated = time_step >= self.T_num
 
+        # Prepare the next state if the episode is ongoing.
         if not terminated:
             base_idx = self.scenario_seed * self.T_num + time_step
             next_state = np.array([
@@ -137,7 +128,7 @@ class MicrogridEnv(gym.Env):
 
         return next_state, terminated
 
-    def update_ess(self, time_step, action, soc_ess_tempt):
+    def _update_ess(self, time_step, action, soc_ess_tempt):
         """Update the ESS state based on the action taken."""
         # Initialize charge and discharge power
         p_ess_ch, p_ess_dch = 0.0, 0.0
@@ -157,32 +148,34 @@ class MicrogridEnv(gym.Env):
             soc_ess = soc_ess_tempt + self.delta_t * (p_ess_ch * self.n_ess_ch - p_ess_dch / self.n_ess_dch)
 
             # Postprocess action to meet all ESS bound constraints
-            p_ess_ch, p_ess_dch = self._postprocess_ess_bound(soc_ess, soc_ess_tempt, p_ess_ch, p_ess_dch)
+            p_ess_ch, p_ess_dch = self._postprocess_bound(p_ess_ch, p_ess_dch, soc_ess, soc_ess_tempt, self.p_ess_ch_max, self.p_ess_dch_max, self.n_ess_ch, self.n_ess_dch, self.soc_ess_max, self.soc_ess_min)
 
-            # Special condition for the second-to-last timestep
-            if time_step == self.T_num - 2:
-                p_ess_ch, p_ess_dch = self._postprocess_ess_setpoint(soc_ess, soc_ess_tempt, p_ess_ch, p_ess_dch)
+            # # Special condition for the second-to-last timestep
+            # if time_step == self.T_num - 2:
+            #     p_ess_ch, p_ess_dch = self._postprocess_ess_setpoint(p_ess_ch, p_ess_dch, soc_ess, soc_ess_tempt)
 
         # Update SOC based on adjusted powers
         soc_ess = soc_ess_tempt + self.delta_t * (p_ess_ch * self.n_ess_ch - p_ess_dch / self.n_ess_dch)
 
         return p_ess_ch, p_ess_dch, soc_ess
 
-    def _postprocess_ess_bound(self, soc_ess, soc_ess_tempt, p_ess_ch, p_ess_dch):
-        """Adjust ESS charging and discharging powers based on SOC constraints."""
-        if soc_ess > self.soc_ess_max:
-            p_ess_ch = min((self.soc_ess_setpoint - soc_ess_tempt) / (self.n_ess_ch * self.delta_t), self.p_ess_ch_max)
-            p_ess_dch = 0
-        elif soc_ess < self.soc_ess_min:
-            p_ess_ch = 0
-            p_ess_dch = min((soc_ess_tempt - self.soc_ess_min) * self.n_ess_dch / self.delta_t, self.p_ess_dch_max)
+    def _postprocess_bound(self, p_ch, p_dch, soc, soc_tempt, p_ch_max, p_dch_max, n_ch, n_dch, soc_max, soc_min):
+        """Adjust charging and discharging powers based on SOC constraints."""
+        # SOC is above the maximum limit.
+        if soc > soc_max:
+            p_ch = min((soc_max - soc_tempt) / (n_ch * self.delta_t), p_ch_max)
+            p_dch = 0
+        # SOC is below the minimum limit.
+        elif soc < soc_min:
+            p_ch = 0
+            p_dch = min((soc_tempt - soc_min) * n_dch / self.delta_t, p_dch_max)
         else:
-            p_ess_ch = min(p_ess_ch, self.p_ess_ch_max)
-            p_ess_dch = min(p_ess_dch, self.p_ess_dch_max)
+            p_ch = min(p_ch, p_ch_max)
+            p_dch = min(p_dch, p_dch_max)
 
-        return p_ess_ch, p_ess_dch
+        return p_ch, p_dch
 
-    def _postprocess_ess_setpoint(self, soc_ess, soc_ess_tempt, p_ess_ch, p_ess_dch):
+    def _postprocess_ess_setpoint(self, p_ess_ch, p_ess_dch, soc_ess, soc_ess_tempt):
         """Handle special conditions for ESS at the second-to-last timestep."""
         if soc_ess < self.soc_ess_threshold:
             if soc_ess_tempt < self.soc_ess_threshold:
@@ -211,17 +204,17 @@ class MicrogridEnv(gym.Env):
 
         return deg_penalty + ess_penalty
 
-    def optim(self, time_step, p_pv_max, p_wg_max, p_if, p_fl_1, p_fl_2, p_ess_ch, p_ess_dch):
+    def optim(self, p_pv_max, p_wg_max, p_if, p_fl_1, p_fl_2, p_ess_ch, p_ess_dch):
         """Optimization method for the microgrid."""
         # Create a new model
         model = gp.Model()
         model.ModelSense = GRB.MINIMIZE
         model.Params.LogToConsole = 0
 
-        ### Diesel engine generator (DEG)
-        p_deg = model.addVar(lb=0, ub=self.p_deg_max, vtype=GRB.CONTINUOUS, name="p_deg")
-        pla_deg = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="pla_deg")
-        F_deg = model.addVar(lb=0, vtype=GRB.CONTINUOUS, name="F_deg")
+        ## Diesel engine generator (DEG)
+        p_deg = model.addVar(vtype=GRB.CONTINUOUS, name="p_deg")
+        pla_deg = model.addVar(vtype=GRB.CONTINUOUS, name="pla_deg")
+        F_deg = model.addVar(vtype=GRB.CONTINUOUS, name="F_deg")
         u_deg = model.addVar(vtype=GRB.BINARY, name="u_deg")
 
         # DEG Constraints
@@ -232,10 +225,10 @@ class MicrogridEnv(gym.Env):
         model.addConstr(F_deg == pla_deg * u_deg)
 
         ## Solar PV scheduled
-        p_pv = model.addVar(lb=0, ub=p_pv_max, vtype=GRB.CONTINUOUS, name="p_pv")
+        p_pv = model.addVar(ub=p_pv_max, vtype=GRB.CONTINUOUS, name="p_pv")
 
         ## Wind generator scheduled
-        p_wg = model.addVar(lb=0, ub=p_wg_max, vtype=GRB.CONTINUOUS, name="p_wg")
+        p_wg = model.addVar(ub=p_wg_max, vtype=GRB.CONTINUOUS, name="p_wg")
 
         # Operation and Maintenance (OM) cost
         F_OM = p_pv * self.phi_pv + p_wg * self.phi_wg + ((p_ess_ch + p_ess_dch) ** 2) * self.phi_ess
@@ -248,10 +241,10 @@ class MicrogridEnv(gym.Env):
         F_DR = (p_fl_1 - p_ls_1) * self.phi_ls_1 + (p_fl_2 - p_ls_2) * self.phi_ls_2
 
         ## Define network variables
-        p_it = model.addVars(self.B_set, lb=0, vtype=GRB.CONTINUOUS, name="p_it")
-        q_it = model.addVars(self.B_set, lb=0, vtype=GRB.CONTINUOUS, name="q_it")
-        l_P_it = model.addVars(self.B_set, lb=0, vtype=GRB.CONTINUOUS, name="l_P_it")
-        l_Q_it = model.addVars(self.B_set, lb=0, vtype=GRB.CONTINUOUS, name="l_Q_it")
+        p_it = model.addVars(self.B_set, vtype=GRB.CONTINUOUS, name="p_it")
+        q_it = model.addVars(self.B_set, vtype=GRB.CONTINUOUS, name="q_it")
+        l_P_it = model.addVars(self.B_set, vtype=GRB.CONTINUOUS, name="l_P_it")
+        l_Q_it = model.addVars(self.B_set, vtype=GRB.CONTINUOUS, name="l_Q_it")
 
         P_ijt = model.addVars(self.branch_ij, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="P_ijt")
         Q_ijt = model.addVars(self.branch_ij, lb=-GRB.INFINITY, vtype=GRB.CONTINUOUS, name="Q_ijt")
@@ -325,7 +318,7 @@ class MicrogridEnv(gym.Env):
         # return results
         return p_deg.X, u_deg.X, p_pv.X, p_wg.X, p_ls_1.X, p_ls_2.X, model.ObjVal
 
-    def initialize_network_data(self):
+    def _init_network_data(self):
         """Load network data and parameters from the scenario configuration."""
         self.bus_data = cfg.bus_data
         self.branch_data = cfg.branch_data
@@ -349,7 +342,7 @@ class MicrogridEnv(gym.Env):
         self.wg_node = cfg.WG_NODE
         self.deg_node = cfg.DEG_NODE
 
-    def initialize_parameters(self):
+    def _init_params(self):
         """Initialize constants and parameters from the scenario configuration."""
         # Parameters for Generation Units
         self.p_pv_rate = cfg.P_PV_RATE
@@ -367,7 +360,6 @@ class MicrogridEnv(gym.Env):
         self.w1_deg = cfg.W1_DEG
         self.w2_deg = cfg.W2_DEG
         self.w3_deg = cfg.W3_DEG
-        self.F_deg_max = calculate_F_deg(self.p_deg_max, self.w1_deg, self.w2_deg, self.w3_deg)
 
         # Energy Storage System (ESS) Parameters
         self.p_ess_ch_max = cfg.P_ESS_CH_MAX
@@ -381,7 +373,6 @@ class MicrogridEnv(gym.Env):
         self.phi_ess = cfg.PHI_ESS
         self.soc_ess_threshold = cfg.SOC_ESS_THRESHOLD
         self.penalty_coefficient = cfg.PENALTY_COEFFICIENT
-        self.F_ess_max = calculate_F_ess(self.p_ess_ch_max)
 
         # Flexible Load (FL) Parameters
         self.ls_setting = cfg.LS_SETTING
@@ -395,3 +386,7 @@ class MicrogridEnv(gym.Env):
 
         # Create PLA points for ESS
         self.ptu_ess, self.ptf_ess = generate_pla_points(0, self.p_ess_ch_max, calculate_F_ess)
+
+    def _get_index(self, scenario: int, time_step: int) -> int:
+        """Get index for scenario data based on time step and scenario seed."""
+        return scenario * self.T_num + time_step
