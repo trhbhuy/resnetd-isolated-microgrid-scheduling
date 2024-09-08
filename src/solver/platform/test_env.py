@@ -14,7 +14,7 @@ class MicrogridEnv(gym.Env):
         # Load and initialize the network data, parameters, and PLA points
         self._init_network_data()
         self._init_params()
-        self._initialize_pla_points()
+        self._init_pla_points()
     
         # Load the simulation data
         self.data = load_data(is_train=False)
@@ -76,12 +76,12 @@ class MicrogridEnv(gym.Env):
         p_ess_ch, p_ess_dch, soc_ess = self._update_ess(time_step, action, soc_ess_tempt)
 
         # Solve the MILP optimization problem
-        p_deg, u_deg, p_pv, p_wg, p_ls_1, p_ls_2, reward = self.optim(self.data['p_pv_max'][base_idx], 
-                                                                      self.data['p_wg_max'][base_idx], 
-                                                                      self.data['p_if'][base_idx], 
-                                                                      self.data['p_fl_1'][base_idx], 
-                                                                      self.data['p_fl_2'][base_idx], 
-                                                                      p_ess_ch, p_ess_dch)
+        p_deg, u_deg, p_pv, p_wg, p_ls_1, p_ls_2, reward = self._optim(self.data['p_pv_max'][base_idx], 
+                                                                       self.data['p_wg_max'][base_idx], 
+                                                                       self.data['p_if'][base_idx], 
+                                                                       self.data['p_fl_1'][base_idx], 
+                                                                       self.data['p_fl_2'][base_idx], 
+                                                                       p_ess_ch, p_ess_dch)
 
         # Calculate the reward and penalties
         cumulative_penalty = self._get_penalty(time_step, p_deg, u_deg, self.p_deg_tempt, self.r_deg, soc_ess)
@@ -204,7 +204,7 @@ class MicrogridEnv(gym.Env):
 
         return deg_penalty + ess_penalty
 
-    def optim(self, p_pv_max, p_wg_max, p_if, p_fl_1, p_fl_2, p_ess_ch, p_ess_dch):
+    def _optim(self, p_pv_max, p_wg_max, p_if, p_fl_1, p_fl_2, p_ess_ch, p_ess_dch):
         """Optimization method for the microgrid."""
         # Create a new model
         model = gp.Model()
@@ -379,7 +379,7 @@ class MicrogridEnv(gym.Env):
         self.phi_ls_1 = cfg.PHI_LS_1
         self.phi_ls_2 = cfg.PHI_LS_2
 
-    def _initialize_pla_points(self, npts: int = 101):
+    def _init_pla_points(self, npts: int = 101):
         """Initialize the piecewise linear approximation (PLA) points for DEG and ESS."""
         # Create PLA points for DEG
         self.ptu_deg, self.ptf_deg = generate_pla_points(self.p_deg_min, self.p_deg_max, lambda p: calculate_F_deg(p, self.w1_deg, self.w2_deg, self.w3_deg), npts)
