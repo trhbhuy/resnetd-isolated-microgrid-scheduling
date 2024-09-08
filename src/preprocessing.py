@@ -21,7 +21,6 @@ def parse_args():
 
     # Dataset and processing arguments
     parser.add_argument('--dataset_name', type=str, default='dataset.pkl', help='Filename for the dataset')
-    parser.add_argument('--sub_dirs', type=str, nargs='+', default='', help='List of subdirectories for specific data types')
     parser.add_argument('--num_train_samples', type=int, default=17544, help='Number of training samples (default: 2 years)')
     parser.add_argument('--scaler_type', type=str, default='MinMax', help='Type of scaler to use (MinMax or Standard)')
     parser.add_argument('--split_type', type=str, default='random', help='Split type: random, kfold, or stratified')
@@ -33,7 +32,7 @@ def parse_args():
 def set_paths(args):
     """Set up paths for data loading, saving, and directories."""
     # Directory for generated data
-    GENERATED_DIR = os.path.join(args.base_dir, args.data_dir, args.generated_dir, args.sub_dir)
+    GENERATED_DIR = os.path.join(args.base_dir, args.data_dir, args.generated_dir)
 
     # Ensure the directory exists
     os.makedirs(GENERATED_DIR, exist_ok=True)
@@ -87,16 +86,11 @@ def main():
     # Parse arguments
     args = parse_args()
 
-    # Preprocess multiple datasets based on subdirectories
-    for subdir in args.sub_dirs:
-        logging.info(f"Processing dataset for {subdir}")
-        args.sub_dir = subdir
+    # Set paths for loading and saving
+    set_paths(args)
 
-        # Set paths for loading and saving
-        set_paths(args)
-
-        # Preprocess the dataset
-        preprocess_data(args)
+    # Preprocess the dataset
+    preprocess_data(args)
 
 # python3 src/preprocessing.py
 # Entry point for the script
