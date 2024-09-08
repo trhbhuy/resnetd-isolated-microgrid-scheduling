@@ -5,32 +5,31 @@ from gurobipy import GRB
 # from ..util import generate_pla_points, calculate_F_deg
 
 class DEG:
-    def __init__(self, p_deg_max, p_deg_min, r_deg, w1, w2, w3, T_set):
+    def __init__(self, T_set, delta_t, p_deg_max, p_deg_min, r_deg, w1, w2, w3):
+        """Initialize parameters."""
+        self.T_set = T_set
+        self.delta_t = delta_t
+
         self.p_deg_max = p_deg_max
         self.p_deg_min = p_deg_min
         self.r_deg = r_deg
         self.w1 = w1
         self.w2 = w2
         self.w3 = w3
-        self.T_set = T_set
     
         # Generate PLA points using the method in this class
         self.ptu, self.ptf = self.generate_pla_points(self.p_deg_min, self.p_deg_max, self.get_F_deg)
 
     def add_variables(self, model):
-        """
-        Add variables to the optimization model for the DEG.
-        """
+        """Add variables to the model."""
         p_deg = model.addVars(self.T_set, vtype=GRB.CONTINUOUS, name="p_deg")
+        u_deg = model.addVars(self.T_set, vtype=GRB.BINARY, name="u_deg")
         pla_deg = model.addVars(self.T_set, vtype=GRB.CONTINUOUS, name="pla_deg")
         F_deg = model.addVars(self.T_set, vtype=GRB.CONTINUOUS, name="F_deg")
-        u_deg = model.addVars(self.T_set, vtype=GRB.BINARY, name="u_deg")
-        return p_deg, pla_deg, F_deg, u_deg
+        return p_deg, u_deg, pla_deg, F_deg
 
-    def add_constraints(self, model, p_deg, pla_deg, F_deg, u_deg):
-        """
-        Add constraints to the optimization model for the DEG.
-        """
+    def add_constraints(self, model, p_deg, u_deg, pla_deg, F_deg):
+        """Add constraints to the model."""
         for t in self.T_set:
             model.addConstr(p_deg[t] <= self.p_deg_max * u_deg[t])
             model.addConstr(p_deg[t] >= self.p_deg_min * u_deg[t])

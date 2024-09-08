@@ -8,7 +8,7 @@ from .util import extract_results
 from .components.diesel_generator import DEG
 from .components.renewables import PV, WG
 from .components.energy_storage import ESS
-from .components.load import FlexibleLoad
+from .components.flexible_load import FlexibleLoad
 from .components.distflow import NetworkConstraints
 
 class Microgrid:
@@ -19,8 +19,7 @@ class Microgrid:
         # self.delta_t = cfg.DELTA_T
 
         # Initialize the components of the microgrid
-        self.deg = DEG(cfg.P_DEG_MAX, cfg.P_DEG_MIN, cfg.R_DEG, cfg.W1_DEG, cfg.W2_DEG, cfg.W3_DEG, cfg.T_SET)
-
+        self.deg = DEG(cfg.T_SET, cfg.DELTA_T, cfg.P_DEG_MAX, cfg.P_DEG_MIN, cfg.R_DEG, cfg.W1_DEG, cfg.W2_DEG, cfg.W3_DEG)
         self.pv = PV(cfg.T_SET, cfg.DELTA_T, cfg.P_PV_RATE, cfg.N_PV, cfg.PHI_PV)
         self.wg = WG(cfg.T_SET, cfg.DELTA_T, cfg.P_WG_RATE, cfg.N_WG, cfg.PHI_WG)
         self.ess = ESS(cfg.T_NUM, cfg.T_SET, cfg.DELTA_T, cfg.P_ESS_CH_MAX, cfg.P_ESS_DCH_MAX, cfg.N_ESS_CH, cfg.N_ESS_DCH, cfg.SOC_ESS_MAX, cfg.SOC_ESS_MIN, cfg.SOC_ESS_SETPOINT, enable_cost_modeling=True, phi_ess=cfg.PHI_ESS)
@@ -36,7 +35,7 @@ class Microgrid:
         model.Params.LogToConsole = 0
 
         # Initialize variables for each component
-        p_deg, pla_deg, F_deg, u_deg = self.deg.add_variables(model)
+        p_deg, u_deg, pla_deg, F_deg = self.deg.add_variables(model)
         p_ess_ch, p_ess_dch, u_ess_ch, u_ess_dch, soc_ess, p_ess, F_ess = self.ess.add_variables(model)
         p_pv = self.pv.add_variables(model, p_pv_max)
         p_wg = self.wg.add_variables(model, p_wg_max)
@@ -46,7 +45,7 @@ class Microgrid:
         p_it, q_it, l_P_it, l_Q_it, P_ijt, Q_ijt, L_ijt, v_it = self.network_constraints.add_variables(model)
 
         # Add constraints for each component
-        self.deg.add_constraints(model, p_deg, pla_deg, F_deg, u_deg)
+        self.deg.add_constraints(model, p_deg, u_deg, pla_deg, F_deg)
         self.ess.add_constraints(model, p_ess_ch, p_ess_dch, u_ess_ch, u_ess_dch, soc_ess, p_ess, F_ess)
 
         self.network_constraints.add_constraints(model, p_it, q_it, l_P_it, l_Q_it, P_ijt, Q_ijt, L_ijt, v_it)
