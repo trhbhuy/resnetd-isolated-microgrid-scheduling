@@ -20,8 +20,10 @@ class Microgrid:
 
         # Initialize the components of the microgrid
         self.deg = DEG(cfg.P_DEG_MAX, cfg.P_DEG_MIN, cfg.R_DEG, cfg.W1_DEG, cfg.W2_DEG, cfg.W3_DEG, cfg.T_SET)
-        self.pv = PV(cfg.P_PV_RATE, cfg.N_PV, cfg.PHI_PV, cfg.T_SET)
-        self.wg = WG(cfg.P_WG_RATE, cfg.N_WG, cfg.PHI_WG, cfg.T_SET)
+
+        self.pv = PV(cfg.T_SET, cfg.DELTA_T, cfg.P_PV_RATE, cfg.N_PV, cfg.PHI_PV)
+
+        self.wg = WG(cfg.T_SET, cfg.DELTA_T, cfg.P_WG_RATE, cfg.N_WG, cfg.PHI_WG)
         self.ess = ESS(cfg.T_NUM, cfg.T_SET, cfg.DELTA_T, cfg.P_ESS_CH_MAX, cfg.P_ESS_DCH_MAX, cfg.N_ESS_CH, cfg.N_ESS_DCH, cfg.SOC_ESS_MAX, cfg.SOC_ESS_MIN, cfg.SOC_ESS_SETPOINT, enable_cost_modeling=True, phi_ess=cfg.PHI_ESS)
         self.flexible_load_1 = FlexibleLoad(cfg.LS_SETTING, cfg.PHI_LS_1, cfg.T_SET)
         self.flexible_load_2 = FlexibleLoad(cfg.LS_SETTING, cfg.PHI_LS_2, cfg.T_SET)
