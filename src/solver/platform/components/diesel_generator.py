@@ -2,8 +2,6 @@ import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
 
-# from ..util import generate_pla_points, calculate_F_deg
-
 class DEG:
     def __init__(self, T_set, delta_t, p_deg_max, p_deg_min, r_deg, w1, w2, w3):
         """Initialize parameters."""
@@ -40,15 +38,11 @@ class DEG:
                 model.addConstr(p_deg[t] <= p_deg[t-1] + self.r_deg)
 
     def generate_pla_points(self, lb: float, ub: float, func: callable, npts: int = 101) -> tuple:
-        """
-        Generate piecewise linear approximation (PLA) points for a given function.
-        """
+        """Generate piecewise linear approximation (PLA) points for a given function."""
         ptu = np.linspace(lb, ub, npts)
         ptf = np.array([func(u) for u in ptu])
         return ptu, ptf
 
     def get_F_deg(self, p_deg: float) -> float:
-        """
-        Calculate the fuel consumption for the Diesel Engine Generator (DEG).
-        """
+        """Calculate the fuel consumption for the Diesel Engine Generator (DEG)."""
         return self.w3 * p_deg**2 + self.w2 * p_deg + self.w1

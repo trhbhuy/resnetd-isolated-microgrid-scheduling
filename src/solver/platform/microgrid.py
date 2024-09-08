@@ -13,10 +13,10 @@ from .components.distflow import NetworkConstraints
 
 class Microgrid:
     def __init__(self):
-        # Time Horizon
+        """Initializes the microgrid with various parameters."""
+        # Time settings
         self.T_num = cfg.T_NUM
         self.T_set = cfg.T_SET
-        # self.delta_t = cfg.DELTA_T
 
         # Initialize the components of the microgrid
         self.deg = DEG(cfg.T_SET, cfg.DELTA_T, cfg.P_DEG_MAX, cfg.P_DEG_MIN, cfg.R_DEG, cfg.W1_DEG, cfg.W2_DEG, cfg.W3_DEG)
@@ -25,8 +25,7 @@ class Microgrid:
         self.ess = ESS(cfg.T_NUM, cfg.T_SET, cfg.DELTA_T, cfg.P_ESS_CH_MAX, cfg.P_ESS_DCH_MAX, cfg.N_ESS_CH, cfg.N_ESS_DCH, cfg.SOC_ESS_MAX, cfg.SOC_ESS_MIN, cfg.SOC_ESS_SETPOINT, enable_cost_modeling=True, phi_ess=cfg.PHI_ESS)
         self.flexible_load_1 = FlexibleLoad(cfg.T_SET, cfg.LS_SETTING, cfg.PHI_LS_1)
         self.flexible_load_2 = FlexibleLoad(cfg.T_SET, cfg.LS_SETTING, cfg.PHI_LS_2)
-
-        self.network_constraints = NetworkConstraints(cfg.B_SET, cfg.bus_data, cfg.branch_data, cfg.BASE_MVA, cfg.BRANCH_IJ, cfg.R_IJ, cfg.X_IJ, cfg.I_MAX, cfg.V_MIN, cfg.V_MAX, cfg.NINSERT_SET, cfg.NOUT_SET, cfg.IF_NODE, cfg.FL_NODE, cfg.ESS_NODE, cfg.PV_NODE, cfg.WG_NODE, cfg.DEG_NODE, cfg.T_SET)
+        self.network_constraints = NetworkConstraints(cfg.T_SET, cfg.B_SET, cfg.bus_data, cfg.branch_data, cfg.BASE_MVA, cfg.BRANCH_IJ, cfg.R_IJ, cfg.X_IJ, cfg.I_MAX, cfg.V_MIN, cfg.V_MAX, cfg.NINSERT_SET, cfg.NOUT_SET, cfg.IF_NODE, cfg.FL_NODE, cfg.ESS_NODE, cfg.PV_NODE, cfg.WG_NODE, cfg.DEG_NODE)
 
     def optim(self, p_pv_max: np.ndarray, p_wg_max: np.ndarray, p_if: np.ndarray, p_fl_1: np.ndarray, p_fl_2: np.ndarray) -> Dict[str, np.ndarray]:
         """Optimization method for the microgrid."""
@@ -80,6 +79,11 @@ class Microgrid:
                 'l_P_it': extract_results(l_P_it, self.T_set, self.network_constraints.B_set),
                 'l_Q_it': extract_results(l_Q_it, self.T_set, self.network_constraints.B_set),
                 'v_it': extract_results(v_it, self.T_set, self.network_constraints.B_set),
+                'p_pv_max': p_pv_max,
+                'p_wg_max': p_wg_max,
+                'p_if': p_if,
+                'p_fl_1': p_fl_1,
+                'p_fl_2': p_fl_2,
             }
 
         else:

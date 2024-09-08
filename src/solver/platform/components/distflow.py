@@ -2,7 +2,9 @@ import gurobipy as gp
 from gurobipy import GRB
 
 class NetworkConstraints:
-    def __init__(self, B_set, bus_data, branch_data, baseMVA, branch_ij, r_ij, x_ij, I_max, v_min, v_max, Ninsert_set, Nout_set, if_node, fl_node, ess_node, pv_node, wg_node, deg_node, T_set):
+    def __init__(self, T_set, B_set, bus_data, branch_data, baseMVA, branch_ij, r_ij, x_ij, I_max, v_min, v_max, Ninsert_set, Nout_set, if_node, fl_node, ess_node, pv_node, wg_node, deg_node):
+        """Initialize parameters."""
+        self.T_set = T_set
         self.B_set = B_set
         self.bus_data = bus_data
         self.branch_data = branch_data
@@ -23,9 +25,8 @@ class NetworkConstraints:
         self.wg_node = wg_node
         self.deg_node = deg_node
 
-        self.T_set = T_set
-
     def add_variables(self, model):
+        """Add variables to the model."""
         p_it = model.addVars(self.B_set, self.T_set, vtype=GRB.CONTINUOUS, name="p_it")
         q_it = model.addVars(self.B_set, self.T_set, vtype=GRB.CONTINUOUS, name="q_it")
         l_P_it = model.addVars(self.B_set, self.T_set, vtype=GRB.CONTINUOUS, name="l_P_it")
@@ -39,6 +40,7 @@ class NetworkConstraints:
         return p_it, q_it, l_P_it, l_Q_it, P_ijt, Q_ijt, L_ijt, v_it
 
     def add_constraints(self, model, p_it, q_it, l_P_it, l_Q_it, P_ijt, Q_ijt, L_ijt, v_it):
+        """Add constraints to the model."""
         # Squared line current limits
         for tt in self.T_set:
             for (ii, jj) in self.branch_ij:
@@ -65,6 +67,7 @@ class NetworkConstraints:
                 model.addConstr(L_ijt[ii, jj, tt] * v_it[ii, tt] >= (P_ijt[ii, jj, tt]**2 + Q_ijt[ii, jj, tt]**2))
 
     def add_pq_constraints(self, model, p_it, q_it, l_P_it, l_Q_it, p_if, p_ls_1, p_ls_2, p_ess_ch, p_ess_dch, p_pv, p_wg, p_deg):
+        """Add gen and load constraints to the model."""
         for tt in self.T_set:
             # Node 0 - Inflexible load demand
             model.addConstr(p_it[self.if_node, tt] == 0)
