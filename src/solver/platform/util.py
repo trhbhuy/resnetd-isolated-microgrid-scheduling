@@ -1,5 +1,3 @@
-# src/optimization/util.py
-
 import os
 import numpy as np
 from typing import Dict, Callable, Tuple, Optional

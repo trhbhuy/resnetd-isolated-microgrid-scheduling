@@ -12,6 +12,14 @@ We opensource in this repository the model used for the ISO-NE test case. Code f
 
 The dataset contains load and temperature data from 2003 to 2014. -->
 
+## Setup 
+
+```bash
+conda env create -n torchtf --file env.yml
+conda activate torchtf
+```
+
+
 ## Structure
 
 ```bash

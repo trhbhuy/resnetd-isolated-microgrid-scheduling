@@ -27,7 +27,7 @@ def parse_option():
     parser.add_argument('--data_dir', type=str, default='data/generated', help='Directory of data for training')
     parser.add_argument('--model', type=str, default='resnetd', help='Model type')
     parser.add_argument('--batch_size', type=int, default=48, help='Batch size')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
+    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs')
     parser.add_argument('--num_workers', type=int, default=4, help='Number of data loading workers')
     parser.add_argument('--gpu_device', type=int, default=0, help='GPU device ID')
     parser.add_argument('--learning_rate', type=float, default=0.005, help='Learning rate')

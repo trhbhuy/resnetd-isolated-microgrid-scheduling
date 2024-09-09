@@ -47,7 +47,7 @@ def set_paths(args):
 def preprocess_data(args):
     """Preprocess the data including loading, scaling, and saving."""
     # Step 1: Load the dataset
-    logging.info(f"Loading dataset from {args.data_path}")
+    logging.info("Loading dataset from {args.data_path}")
     dataset = data_loader(args.data_path)
     data_seq, label = dataset['data_seq'], dataset['label']
 
@@ -62,7 +62,7 @@ def preprocess_data(args):
     label_train_scaled, label_scaler = scaling_data(label_train, args.scaler_type)
 
     # Save the scalers
-    logging.info(f"Saving scalers")
+    logging.info("Saving scalers")
     save_scaler(data_scaler, args.data_scaler_save_path)
     save_scaler(label_scaler, args.label_scaler_save_path)
 
@@ -76,7 +76,7 @@ def preprocess_data(args):
     data_train, data_val, label_train, label_val = split_data(data_train_tensor, label_train_tensor, args.split_type, args.validation_split_size, args.random_seed)
 
     # Step 6: Save train and validation sets
-    logging.info(f"Saving train data and validation data")
+    logging.info("Saving train data and validation data")
     train_data = {'data_seq': data_train, 'label': label_train}
     val_data = {'data_seq': data_val, 'label': label_val}
     save_data(train_data, val_data, args.train_save_path, args.val_save_path)

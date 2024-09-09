@@ -1,9 +1,6 @@
 import numpy as np
 from typing import Dict, List
 
-import numpy as np
-from typing import Dict, List
-
 def dataset_aggregation(records: Dict[str, np.ndarray], feature_keys: List[str], label_keys: List[str]) -> Dict[str, np.ndarray]:
     """Process the loaded results into a single dataset for model training.
 
