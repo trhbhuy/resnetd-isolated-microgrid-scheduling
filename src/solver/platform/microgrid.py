@@ -1,15 +1,15 @@
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
-from typing import Dict, Optional
-from .. import config as cfg
+from typing import Dict
 
-from .util import extract_results
 from .components.diesel_generator import DEG
 from .components.renewables import PV, WG
 from .components.energy_storage import ESS
 from .components.flexible_load import FlexibleLoad
 from .components.distflow import NetworkConstraints
+from .. import config as cfg
+from .util import extract_results
 
 class Microgrid:
     def __init__(self):

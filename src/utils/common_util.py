@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import pickle
 import logging
+from typing import Dict
 
-from typing import Dict, Callable, Tuple, Optional
 from solver.config import PROCESSED_DATA_DIR, GENERATED_DATA_DIR
 
 def save_pickle(obj, file_path: str):

@@ -5,8 +5,8 @@ import logging
 import numpy as np
 import torch
 
-from solver.platform.test_env import MicrogridEnv
 from networks.resnetd import ResNetD
+from solver.platform.test_env import MicrogridEnv
 from utils.test_util import cal_metric, load_dataset
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

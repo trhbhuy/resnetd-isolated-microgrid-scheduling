@@ -4,16 +4,16 @@ from solver.platform.microgrid import Microgrid
 from solver.methods.data_loader import load_data
 from solver.methods.optimization import run_optim
 from solver.methods.dataset_aggregation import dataset_aggregation
-from utils.common_utils import save_results, save_dataset
+from utils.common_util import save_results, save_dataset
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def process_optimization(hems, data):
+def process_optimization(microgrid, data):
     """Run scenarios and aggregate the results."""
     # Run scenarios
     logging.info("Running scenarios...")
-    results = run_optim(hems, data)
+    results = run_optim(microgrid, data)
 
     # Save results
     logging.info("Saving scenario results...")
@@ -46,7 +46,7 @@ def main():
         if data is None:
             raise ValueError("Failed to load data.")
 
-        # Step 2: Initialize the HEMS platform
+        # Step 2: Initialize the microgrid platform
         logging.info("Initializing Microgrid...")
         microgrid = Microgrid()
 
